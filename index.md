@@ -1,36 +1,67 @@
 ---
 layout: post
-title: "Figuring out herd7 memory models"
+title: "Understanding the LKMM using herd7"
 comments: true
 categories: [herd7, lkmm, formalmethods]
 ---
-[Article is under construction]
+# Understanding the LKMM using herd7
 
-The herd7 memory consistency tool is used to verify if certain (mostly
-undesirable) outcomes (memory-related) of concurrent programs exist, given a
-memory model. A memory-model restricts possible candidate executions. After
-such restriction, if certain undesirable still exist, the user is notified
-via their assertions in the `exists` clause of a litmus test.
+The herd7 memory consistency tool is used to verify if certain (likely
+undesirable) outcomes of memory accesses made by concurrent programs exist,
+given a memory model.
 
-This is an advanced article that goes through the different parts of the
-linux-kernel.cat code, and tries to explain with examples about how/why
-properties are defined the way they are. The motivation to understand this
-deeply is, by understanding how to read a memory model written in CAT, it
-should be possible to get a deep understanding of how memory consistency and
-ordering works and how a memory model behaves. Even though the herd7 memory
-model is abstract in some sense (it does not describe CPU implementation but
-just a set of properites and rules on memory ordering and program execution),
-it can still be considered to model of how a CPU should behave. Thus it can be
-argued that you are formally defining how memory accesses in CPUs should
-typically behave, if such CPUs are expected to run concurrent Linux kernel
-code.
+You see, herd7 on its own does not know anything about how programs execute.
 
-It is assumed that the reader is already familiar with how to use the tool, as
-well is familiar with various notations such as `->po`, `->co` etc. This is
-described in much detail in the
-`tools/memory-model/Documentation/explanation.txt`. There are also several LWN
-articles and conference papers on the herd7 tools which we will not replicate
-here.
+For example, given a program executing on processor P0:
+
+```
+P0(int *x) {
+  WRITE_ONCE(*x, 2);
+  WRITE_ONCE(*x, 3);
+}
+```
+Any sane computer architecture will conclude that the final value of `x` is 2.
+
+However, herd7 without any memory model (or a memory model that allows everything)
+will consider the following 2 possibilities as valid:
+
+```
+Candidate execution 1:
+1. Value 2 is stored to x.
+2. Value 3 overwrites the value 2 that was just stored to x.
+```
+
+and,
+```
+Candidate execution 2:
+1. Value 3 is stored to x.
+2. Value 2 overwrites the value 2 that was just stored to x.
+```
+These 2 possible executions are called *candidate executions*.
+
+It is upto the memory model to *disallow* some of these candidate executions,
+after all the second candidate executions. This is exactly what a memory model
+like the `LKMM` does. The model is written in the `linux-kernel.cat` and
+`linux-kernel.bell` files and this article will go over some parts of the model
+especially it will teach the reader how to use the herd7 tool to visually understand
+the more difficult parts of the `.bell` and `.cat` files, by using herd7 to generate
+complex graphs and help it aid in reverse engineering the equations. Armed with
+this knowledge, the reader can then explore more advanced nuances on their own using herd7.
+
+Where possible, we will try to prioritize describing how to use herd7, and
+the syntax of `CAT` code, over actually describing too many details of the axioms, as
+we believe understanding the axioms can be achieved once the reader is empowered with
+the knowledge of how to use herd7 and read/write `CAT` code.
+
+Note that, even though a herd7 memory model is abstract in some sense (it does
+not describe CPU implementation but just a set of properites and rules on memory
+ordering and program execution), it can still be considered to be a model of how
+a CPU should behave if it CPU wishes to run the Linux kernel code correctly.
+It does so by formally defining how memory ordering in multiprocessor CPUs should
+typically interact.
+
+In the next section, we will describe how to eliminate the nonsensical candidate
+execution 2, which no sane CPU design should support, least of all the LKMM.
 
 ## 1. Sequential consistency per-variable (SCPV)
 
@@ -48,7 +79,8 @@ certain property. Let us see if we can define the violations of SCPV as a cycle
 in a particular candidate execution, and then tell the model that such execution
 candidates are forbidden.
 
-Consider a program doing 2 writes to a variable:
+Consider a program doing the same program from earlier doing a pair of writes,
+this time with the events labeled:
 
 ```
 P0(int *x) {
@@ -56,33 +88,56 @@ P0(int *x) {
   WRITE_ONCE(*x, 3);            // event W2
 }
 ```
+As described earlier, there are 2 candidate executions:
 
-Without `SCPV`, this program has 2 outcomes:
-
-1. The final value of x is 2. This happens because of the following candidate execution:
-
+Candidate 1. The final value of x is 2. This happens because of the following candidate execution:
 ```
 W2 ->co W1
 ```
 
-2. The final value of x is 3. This happens because of the following candidate execution:
-
+Candidate 2. The final value of x is 3. This happens because of the following candidate execution:
 ```
 W1 ->co W2
 ```
 
-We wish to forbid the pattern in #1. How do we do that?
+A quick note on `->co`. It describes the order of writes to the same variable. For example:
+```
+W1 ->co W2
+```
+means the writes (to the same variable) followed the order of first W1, and then W2
+in the cache-coherent memory, in that order.
 
-Observe that because of program ordering, there is a relation: `W1 -> W2`.
+So, we wish to forbid the pattern in candidate #1. How do we do that?
 
-The `->po-loc` relation links to program-ordered memory accesses happening on
+Because of the instruction order in the instruction order, there is a relation in LKMM
+called: `W1 ->po-loc W2`.
+
+The `->po-loc` relation links 2 program-ordered memory accesses happening on
 the same CPU.
 
 We can combine program ordering (`->po-loc`) and cache coherent ordering
-(`->co`) to build a cycle. We can build a new relation by taking the union of
-the 2:
+(`->co`) to build a cycle.
+
+In herd7's `CAT` language`, using a keyword like `po-loc` or `co`
+gives you a set of all possible event-pairs (relations). This set is
+actually (confusingly) called a relation.
+
+For example, `->co` is the following relation:
+```
+[ (W1, W2)  ,  (W2, W1)  ]
+```
+
+Similarly, `->po-loc` is the following relation:
+```
+
+```
+
+We can build a new relation by taking the union of
+the 2, using the union order (pipe).
 `po-loc | co`
-This relation becomes `W1 -> po-loc -> W2 -> co -> W1` for case #1 or in other
+
+
+This united relation becomes `W1 -> po-loc -> W2 -> co -> W1` for case #1 or in other
 words, a cycle. So we can say `acyclic po-loc | co` to forbid the bad candidate
 execution.
 
