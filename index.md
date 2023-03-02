@@ -104,9 +104,9 @@ A quick note on `->co`. It describes the order of writes to the same variable. F
 ```
 W1 ->co W2
 ```
-means the writes (to the same variable) followed the order of first W1, and then W2
-in the cache-coherent memory, in that order. In other words, the program execution
-resulted in W2 overwrote W1 and the final value of variable being what W2 wrote.
+means the writes (to the same variable) followed the order of first W1, and
+then W2 in the cache-coherent memory. In other words, the program execution
+resulted in W2 overwriting W1 with the final value of the variable decided by W2.
 
 So, we wish to forbid the pattern in candidate #2. How do we do that?
 
@@ -220,9 +220,9 @@ A cycle can be observed when uniting all of these relations using `po-loc | co`,
 
 Thus `acyclic po-loc | co` can again be used to forbid the candidate executions #3, and similarly #6.
 
-So far we have only considered stores, however we must order the reads from
-these stores as well, and such reads cannot observe the stores to the same
-variable out of order. Let us next look at an example, where the above
+So far we have only considered stores, however we must order the loads with
+respect to these stores as well, and such reads cannot observe the stores to
+the same variable out of order. Let us next look at an example, where the above
 acyclic definition is incomplete.
 
 Consider the following Litmus test involving read accesses:
