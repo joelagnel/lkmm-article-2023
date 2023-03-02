@@ -105,8 +105,8 @@ A quick note on `->co`. It describes the order of writes to the same variable. F
 W1 ->co W2
 ```
 means the writes (to the same variable) followed the order of first W1, and then W2
-in the cache-coherent memory, in that order. In other words, W2 overwrote W1 and the
-variable being written had the final value that W2 wrote.
+in the cache-coherent memory, in that order. In other words, the program execution
+resulted in W2 overwrote W1 and the final value of variable being what W2 wrote.
 
 So, we wish to forbid the pattern in candidate #2. How do we do that?
 
