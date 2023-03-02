@@ -35,7 +35,7 @@ and,
 ```
 Candidate execution 2:
 1. Value 3 is stored to x.
-2. Value 2 overwrites the value 2 that was just stored to x.
+2. Value 2 overwrites the value 3 that was just stored to x.
 ```
 These 2 possible executions are called *candidate executions*.
 
