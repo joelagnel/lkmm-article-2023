@@ -4,9 +4,6 @@ title: "Understanding the LKMM using herd7"
 comments: true
 categories: [herd7, lkmm, formalmethods]
 ---
-
-![Alt text](https://g.gravizo.com/source/custom_svg?https%3A%2F%2Fraw.githubusercontent.com%2FTLmaK0%2Fgravizo%2Fmaster%2FREADME.md)
-
 # Understanding the LKMM using herd7
 
 The herd7 memory consistency tool is used to verify if certain (likely
@@ -148,10 +145,10 @@ This united relation is:
 ```
 [ (W1, W2), (W2, W1) ]
 ```
-Or it can be written as `W1 ->po-loc -> W2 ->co -> W1`
+Or it can be written as `W1 ->po-loc W2 ->co -> W1`
 
 Visually this union results in the following graph:
-![Graph showing po-loc and co cycle]()
+![Graph showing po-loc and co cycle](/images/herd7/poloc-co-cycle.svg)
 
 This is a cycle! So we can we can simply define a property (or axiom) in the CAT code as:
 ```

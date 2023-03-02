@@ -1,0 +1,12 @@
+digraph {
+    node [ fontname="Monospace" ];
+    node [shape = circle];
+    edge [ fontname="Monospace" ];
+    nodesep=1;
+    ranksep=1;
+    pad=0.1;
+
+    "W2" -> "W1"[label="co",weight="0.4"];
+    "W1" -> "W2"[label="  po-loc",weight="0.4"];
+}
+
