@@ -1,0 +1,19 @@
+/*
+W2 ->co W3
+W3 ->co W1
+W1 ->po-loc W2
+*/
+
+digraph {
+    node [ fontname="Monospace" ];
+    node [shape = circle];
+    edge [ fontname="Monospace" ];
+    nodesep=0.8;
+    ranksep=0.8;
+    pad=0.1;
+
+    "W2" -> "W3"[label="co",weight="0.4"];
+    "W3" -> "W1"[label="co",weight="0.4"];
+    "W1" -> "W2"[label=" po-loc",weight="0.4"];
+}
+
