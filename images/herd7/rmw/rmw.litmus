@@ -1,0 +1,18 @@
+C rmw-1
+
+{}
+
+P0(int *x)
+{
+        int r0;
+
+        r0 = xchg(x, 1);
+}
+
+P1(int *x)
+{
+        WRITE_ONCE(*x, 2);
+}
+
+
+exists (0:r0=0 /\ x=1)

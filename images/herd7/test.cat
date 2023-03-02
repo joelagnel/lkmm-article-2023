@@ -1,0 +1,18 @@
+"Linux-kernel memory consistency model"
+
+(*
+ * File "lock.cat" handles locks and is experimental.
+ * It can be replaced by include "cos.cat" for tests that do not use locks.
+ *)
+
+include "cos.cat"
+
+(* Sequential Consistency Per Variable
+let com = rf | co | fr
+acyclic po-loc | com as coherence
+ *)
+
+acyclic po-loc | co
+
+(* Atomic Read-Modify-Write *)
+empty rmw & (fre ; coe) as atomic

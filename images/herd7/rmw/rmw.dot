@@ -1,0 +1,27 @@
+digraph G {
+
+splines=spline;
+pad="0.100000";
+
+/* legend */
+fontsize=8;
+label="Test rmw-1, Generic(Linux-kernel memory consistency model)";
+
+
+/* the unlocked events */
+proc0_label_node [shape=none, fontsize=8, label="Thread 0", pos="1.000000,2.925000!", fixedsize=true, width=1.300000, height=0.281250]
+eiid0 [label="a: R*[once][x]=0", shape="none", fontsize=8, pos="0.250000,2.587500!", fixedsize="false", height="0.111111", width="1.444444"];
+eiid1 [label="b: W*[once][x]=1", shape="none", fontsize=8, pos="1.000000,1.125000!", fixedsize="false", height="0.111111", width="1.444444"];
+proc1_label_node [shape=none, fontsize=8, label="Thread 1", pos="3.000000,2.925000!", fixedsize=true, width=1.300000, height=0.281250]
+eiid2 [label="c: W[once][x]=2", shape="none", fontsize=8, pos="3.000000,2.250000!", fixedsize="false", height="0.111111", width="1.333333"];
+
+
+/* the poi edges */
+/* the rfmap edges */
+
+
+/* The viewed-before edges */
+eiid0 -> eiid1 [label="Rmw", color="red", fontcolor="#000000", fontsize=8, arrowsize="0.800000"];
+eiid0 -> eiid2 [label="fr", color="#ffa040", fontcolor="#ffa040", fontsize=8, arrowsize="0.800000"];
+eiid2 -> eiid1 [label="co", fontsize=8, arrowsize="0.800000", color="blue", fontcolor="blue"];
+}
