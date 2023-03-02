@@ -4,6 +4,9 @@ title: "Understanding the LKMM using herd7"
 comments: true
 categories: [herd7, lkmm, formalmethods]
 ---
+
+![Alt text](https://g.gravizo.com/source/custom_svg?https%3A%2F%2Fraw.githubusercontent.com%2FTLmaK0%2Fgravizo%2Fmaster%2FREADME.md)
+
 # Understanding the LKMM using herd7
 
 The herd7 memory consistency tool is used to verify if certain (likely
@@ -92,12 +95,12 @@ As described earlier, there are 2 candidate executions:
 
 Candidate 1. The final value of x is 2. This happens because of the following candidate execution:
 ```
-W2 ->co W1
+W1 ->co W2
 ```
 
 Candidate 2. The final value of x is 3. This happens because of the following candidate execution:
 ```
-W1 ->co W2
+W2 ->co W1
 ```
 
 A quick note on `->co`. It describes the order of writes to the same variable. For example:
@@ -105,22 +108,24 @@ A quick note on `->co`. It describes the order of writes to the same variable. F
 W1 ->co W2
 ```
 means the writes (to the same variable) followed the order of first W1, and then W2
-in the cache-coherent memory, in that order.
+in the cache-coherent memory, in that order. In other words, W2 overwrote W1 and the
+variable being written had the final value that W2 wrote.
 
-So, we wish to forbid the pattern in candidate #1. How do we do that?
+So, we wish to forbid the pattern in candidate #2. How do we do that?
 
-Because of the instruction order in the instruction order, there is a relation in LKMM
-called: `W1 ->po-loc W2`.
+First, lets learn a new relation. Following the instruction order in the instruction
+stream, there is a relation in LKMM called `po-loc`.
 
-The `->po-loc` relation links 2 program-ordered memory accesses happening on
-the same CPU.
+The `po-loc` relation links 2 program-ordered memory accesses happening on
+the same CPU, and on the same variable.
 
-We can combine program ordering (`->po-loc`) and cache coherent ordering
-(`->co`) to build a cycle.
+So we have a relation `W1 ->po-loc W2` in the program.
 
-In herd7's `CAT` language`, using a keyword like `po-loc` or `co`
-gives you a set of all possible event-pairs (relations). This set is
-actually (confusingly) called a relation.
+Lets learn a new notion of how heard builds a relation (a set of event-pairs).
+
+In herd7's `CAT` language`, using a keyword like `po-loc` or `co` gives you
+a set of all possible event-pairs (relations). This set is actually
+(confusingly) called a relation.
 
 For example, `->co` is the following relation:
 ```
@@ -129,19 +134,37 @@ For example, `->co` is the following relation:
 
 Similarly, `->po-loc` is the following relation:
 ```
+[ (W1, W2) ]
 
 ```
+We can combine program ordering (`->po-loc`) and cache coherent ordering
+(`->co`) to build a cycle.
 
 We can build a new relation by taking the union of
 the 2, using the union order (pipe).
 `po-loc | co`
 
+This united relation is:
+```
+[ (W1, W2), (W2, W1) ]
+```
+Or it can be written as `W1 ->po-loc -> W2 ->co -> W1`
 
-This united relation becomes `W1 -> po-loc -> W2 -> co -> W1` for case #1 or in other
-words, a cycle. So we can say `acyclic po-loc | co` to forbid the bad candidate
-execution.
+Visually this union results in the following graph:
+![Graph showing po-loc and co cycle]()
 
-Another possibility is, there are writes happening on different CPUs:
+This is a cycle! So we can we can simply define a property (or axiom) in the CAT code as:
+```
+let scpv = acyclic po-loc | co
+```
+This makes herd7 forbid all candidate executions that don't satisfy the `scpv` property.
+
+Note that to forbid candidate execute #2, we could have simply said:
+```
+let scvp = acyclic co
+```
+
+However, consider the following 2 CPU example, with writes happening on different CPUs:
 ```
 P0(int *x) {
   WRITE_ONCE(*x, 2);            // event W1
@@ -157,38 +180,37 @@ Here there are 6 possible candidate executions:
 
 1. Final value is 4.
 ```
-W1->W2->W3
+W1 ->co W2->co W3
 ```
 
 2. Final value is 4.
 ```
-W2->W1->W3
+W2 ->co W1 ->co W3
 ```
 
 3. Final value is 2.
 ```
-W2->W3->W1
+W2 ->co W3->co W1
 ```
 
 4. Final value is 3.
 ```
-W1->W3->W2
+W1 ->co W3 ->co W2
 ```
 
 5. Final value is 3.
 ```
-W3->W1->W2
+W3 ->co W1 ->co W2
 ```
 
 6. Final value is 2.
 ```
-W3->W2->W1
+W3 ->co W2 ->co W1
 ```
 
+Here cases #3 and #6 should be forbidden, as the only allowed final-value outcomes should be 3 or 4.
 
-Here cases #3 and #6 should be forbidden. The only allowed outcomes should be 3 or 4.
-
-#3 has the following relations:
+Candidate execution #3 has the following relations:
 ```
 W2 ->co W3
 W3 ->co W1
