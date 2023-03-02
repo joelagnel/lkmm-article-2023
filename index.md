@@ -148,6 +148,7 @@ This united relation is:
 Or it can be written as `W1 ->po-loc W2 ->co -> W1`
 
 Visually this union results in the following graph:
+
 ![Graph showing po-loc and co cycle](/images/herd7/poloc-co-cycle.svg)
 
 This is a cycle! So we can we can simply define a property (or axiom) in the CAT code as:
