@@ -214,7 +214,9 @@ W2 ->co W3
 W3 ->co W1
 W1 ->po-loc W2
 ```
-A cycle can be observed when uniting all of these relations using `po-loc | co`
+A cycle can be observed when uniting all of these relations using `po-loc | co`, which is equivalent to this graph:
+
+![Graph showing po-loc and co cycle](/images/herd7/poloc-co-cycle-2.svg)
 
 Thus `acyclic po-loc | co` can again be used to forbid the candidate executions #3, and similarly #6.
 
