@@ -214,6 +214,7 @@ Time scpv-rf 0.00
 Hash=f2f1ffdc787b0e923ae8cf087fcd5b12
 ```
 And the graph for the forbidden case is as follows:
+
 ![A graph showing failure of read sequential consistency](/images/herd7/scpv/scpvrf.svg)
 
 As you can see, there is a cycle between `->po-loc`, `->rf` and `->fr`.
