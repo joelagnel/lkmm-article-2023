@@ -100,6 +100,9 @@ Candidate 2. The final value of x is 3. This happens because of the following ca
 W2 ->co W1
 ```
 
+Visually this can be shown as 2 candidate graphs:
+[comment]: <> (Add 2 graphs here)
+
 A quick note on `->co`. It describes the order of writes to the same variable. For example:
 ```
 W1 ->co W2
