@@ -6,6 +6,8 @@ categories: [herd7, lkmm, formalmethods]
 ---
 # Understanding the LKMM using herd7
 
+[WIP / incomplete ]
+
 The herd7 memory consistency tool is used to verify if certain (likely
 undesirable) outcomes of memory accesses made by concurrent programs exist,
 given a memory model.
