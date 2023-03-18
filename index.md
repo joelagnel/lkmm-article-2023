@@ -401,4 +401,28 @@ Putting all this together, we could conclude that if the final value of `y` is 2
 
 However, we are missing a subtle point related to propogation which can indeed make this happen!
 
+Let us prove this mathematically. First, the write to `y` happens in the following order, as per the exists clause:
+```
+WRITE_ONCE(*y, 1) ->co WRITE_ONCE(*y, 2)
+```
+That's how `y` ends up with a final value of 2.
+
+Further, the strong fence guarantees that the store to `y` happened before the read from `x` was even executed:
+```
+WRITE_ONCE(*y, 2) ->strong-fence READ_ONCE(*x)
+```
+
+Putting these 2 relations together, we proved that the store to `y` happened before the read to `x`:
+```
+WRITE_ONCE(*y, 1) ->happened-before READ_ONCE(*x)
+```
+
+On thread `P0`, we also have a relation between the pair of stores:
+```
+WRITE_ONCE(*x, 1) ->weak-fence WRITE_ONCE(*y, 1)
+```
+
+
+
+
 
