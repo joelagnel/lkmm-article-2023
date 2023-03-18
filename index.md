@@ -365,9 +365,9 @@ These candidates will be rejected, as our model cannot possibly support them
 empty rmw & (fr; co)
 ```
 
-## 3. Propogation
+## 3. Propagation
 
-One of the most confusing parts of memory ordering is that of delayed propogation. Using a formal modeling tool like LKMM, we can get a better understanding of this concept.
+One of the most confusing parts of memory ordering is that of delayed propagation. Using a formal modeling tool like LKMM, we can get a better understanding of this concept.
 
 Consider the following litmus test with 2 concurrent threads running on 2 CPUs (P0 and P1):
 
@@ -399,11 +399,11 @@ Also due to the strong fence, the read of `x` happenned after the store of 2 to 
 
 Putting all this together, we could conclude that if the final value of `y` is 2, then the read from `x` on `P1` happened after the write to `x` on `P0`. This means the read into register `r0` can never be 0.
 
-However, we are missing a subtle point related to propogation which can indeed make this happen! Even though we have the `->co` relation between the stores to `y`, the store to `x` can be propogated much later to thread `P1` as the `weak fence` delays the propogation.
+However, we are missing a subtle point related to propagation which can indeed make this happen! Even though we have the `->co` relation between the stores to `y`, the store to `x` can be propagated much later to thread `P1` as the `weak fence` delays the propagation.
 
-Let us see what it takes to forbid this mathematically and why weak fences cannot forbid it. First lets define a `->prop` relation. A `->prop` relation guarantees the propogation of changes to different memory locations to happen in a certain order.
+Let us see what it takes to forbid this mathematically and why weak fences cannot forbid it. First lets define a `->prop` relation. A `->prop` relation guarantees the propagation of changes to different memory locations to happen in a certain order.
 
-So for instance, if we have writes `W1` and `W2`, `W1 ->co W2` implies `W1 ->prop W2`.  Weak fences also assist in propogation of previous `->co` links.
+So for instance, if we have writes `W1` and `W2`, `W1 ->co W2` implies `W1 ->prop W2`.  Weak fences also assist in propagation of previous `->co` links.
 
 So, `W1 ->co W2 ->weak-fence W3` also implies `W1 ->prop W3`. This property of weak fences is called cumulativity.
 
@@ -426,9 +426,9 @@ READ_ONCE(*x); ->prop WRITE_ONCE(*y, 1);
 ```
 That may appear like a cycle at first that we can just forbid, however it is important to realize that `A ->prop B` and `B ->prop C` does not imply `A ->prop C`. Because we have no way of chaining 2 `->prop` relations, we cannot define a chain of `->prop` relations to be acyclic because `->prop` relations may not happen temporally with respect to each other.
 
-In plain words, The action "A propogating before B" can happen after the action "B propogating before C".
+In plain words, The action "A propagating before B" can happen after the action "B propagating before C".
 
-In order to enforce the order `A ->prop B ->prop C`, we need both `prop` relations to involve strong fences, not just one of them. This upgrades the `prop` relation to a `pb` relation (propogates before) in LKMM terminology.
+In order to enforce the order `A ->prop B ->prop C`, we need both `prop` relations to involve strong fences, not just one of them. This upgrades the `prop` relation to a `pb` relation (propagates before) in LKMM terminology.
 
 Applying this to the previous example, we have:
 ```
