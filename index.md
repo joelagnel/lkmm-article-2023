@@ -411,7 +411,7 @@ Applying this to the previous example, we have:
 ```
 WRITE_ONCE(*y, 1) ->co WRITE_ONCE(*y, 2) ->strong-fence  READ_ONCE(*x)
 ```
-and
+and the read of `x` to be 0,
 ```
 READ_ONCE(*x); ->fr WRITE_ONCE(*x, 1); ->weak-fence WRITE_ONCE(*y, 1);
 ```
@@ -425,7 +425,7 @@ and
 READ_ONCE(*x); ->prop WRITE_ONCE(*y, 1);
 ```
 
-However, it is important to realize that `A ->prop B` and `B ->prop C` does not imply `A ->prop C`.
+However, it is important to realize that `A ->prop B` and `B ->prop C` does not imply `A ->prop C`. Because we have no way of chaining 2 `->prop` relations, we can define a chain of `->prop` relations to be acyclic.
 
 In plain words, The action "A propogating before B" can happen after the action "B propogating before C".
 
@@ -448,3 +448,5 @@ and
 ```
 READ_ONCE(*x); ->pb WRITE_ONCE(*y, 1);
 ```
+
+Now we can forbid this undesirable cause of `x` being read as 0, simply saying that the LKMM forbids cycles in `->pb`.
