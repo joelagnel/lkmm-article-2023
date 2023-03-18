@@ -401,17 +401,17 @@ Putting all this together, we could conclude that if the final value of `y` is 2
 
 However, we are missing a subtle point related to propogation which can indeed make this happen! Even though we have the `->co` relation between the stores to `y`, the store to `x` can be propogated much later to thread `P1` as the `weak fence` delays the propogation.
 
-Let us prove this mathematically. First lets define a `->prop` relation. A `->prop` relation guarantees the propogation of changes to different memory locations to happen in a certain order.
+Let us see what it takes to forbid this mathematically and why weak fences cannot forbid it. First lets define a `->prop` relation. A `->prop` relation guarantees the propogation of changes to different memory locations to happen in a certain order.
 
 So for instance, if we have writes `W1` and `W2`, `W1 ->co W2` implies `W1 ->prop W2`.  Weak fences also assist in propogation of previous `->co` links.
 
 So, `W1 ->co W2 ->weak-fence W3` also implies `W1 ->prop W3`. This property of weak fences is called cumulativity.
 
-Applying this to the previous example, we have:
+Applying this to the previous example, for `x` to be read as 0 with the final value as `y`, we generate:
 ```
 WRITE_ONCE(*y, 1) ->co WRITE_ONCE(*y, 2) ->strong-fence  READ_ONCE(*x)
 ```
-and the read of `x` to be 0,
+and,
 ```
 READ_ONCE(*x); ->fr WRITE_ONCE(*x, 1); ->weak-fence WRITE_ONCE(*y, 1);
 ```
@@ -424,12 +424,11 @@ and
 ```
 READ_ONCE(*x); ->prop WRITE_ONCE(*y, 1);
 ```
-
-However, it is important to realize that `A ->prop B` and `B ->prop C` does not imply `A ->prop C`. Because we have no way of chaining 2 `->prop` relations, we can define a chain of `->prop` relations to be acyclic.
+That may appear like a cycle at first that we can just forbid, however it is important to realize that `A ->prop B` and `B ->prop C` does not imply `A ->prop C`. Because we have no way of chaining 2 `->prop` relations, we cannot define a chain of `->prop` relations to be acyclic because `->prop` relations may not happen temporally with respect to each other.
 
 In plain words, The action "A propogating before B" can happen after the action "B propogating before C".
 
-In order to enforce `A ->prop B ->prop C`, we need both `prop` relations to involve strong fences, not just one of them. This upgrades the `prop` relation to a `pb` relation (propogates before) in LKMM terminology.
+In order to enforce the order `A ->prop B ->prop C`, we need both `prop` relations to involve strong fences, not just one of them. This upgrades the `prop` relation to a `pb` relation (propogates before) in LKMM terminology.
 
 Applying this to the previous example, we have:
 ```
