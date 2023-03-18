@@ -364,3 +364,41 @@ These candidates will be rejected, as our model cannot possibly support them
 ```
 empty rmw & (fr; co)
 ```
+
+## 3. Propogation
+
+One of the most confusing parts of memory ordering is that of delayed propogation. Using a formal modeling tool like LKMM, we can get a better understanding of this concept.
+
+Consider the following litmus test with 2 concurrent threads running on 2 CPUs (P0 and P1):
+
+```
+P0(int *x, int *y)
+{
+	WRITE_ONCE(*x, 1);
+	smp_wmb();
+	WRITE_ONCE(*y, 1);
+}
+
+P1(int *x, int *y)
+{
+	int r0;
+
+	WRITE_ONCE(*y, 2);
+	smp_mb();
+	r0 = READ_ONCE(*x);
+}
+
+exists (y=2 /\ 1:r0=0)
+```
+
+The exists clause tries to verify if any candidate execution in this concurrent program can result in `y` having a final value of 2, and P1's read into register r0 having a value of 0.
+
+Intuitively speaking, if `y` has a final value of 2, then the store of 1 to `y` happened before the store of 2 to `y`. This means that the store of 1 to `x` happened before the store of 1 to `y`.
+
+Also due to the strong fence, the read of `x` happenned after the store of 2 to `y`.
+
+Putting all this together, we could conclude that if the final value of `y` is 2, then the read from `x` on `P1` happened after the write to `x` on `P0`. This means the read into register `r0` can never be 0.
+
+However, we are missing a subtle point related to propogation which can indeed make this happen!
+
+
