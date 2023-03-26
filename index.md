@@ -365,6 +365,8 @@ These candidates will be rejected, as our model cannot possibly support them
 empty rmw & (fr; co)
 ```
 
+The next several sections will discuss difficult-to-understand topics using the herd7 modeling tool and using examples and mathematics where possible.
+
 ## 3. Propagation
 
 One of the most confusing parts of memory ordering is that of delayed propagation. Using a formal modeling tool like LKMM, we can get a better understanding of this concept.
@@ -452,3 +454,63 @@ READ_ONCE(*x); ->pb WRITE_ONCE(*y, 1);
 ```
 
 Now we can forbid this undesirable cause of `x` being read as 0, simply saying that the LKMM forbids cycles in `->pb`.
+
+## 4. Speculative execution and memory ordering
+
+In this section, we will go over an example of control-flow speculation that causes memory accesses to happen in an unexpected order, and how herd7 formally models this.
+
+Consider the following litmus test:
+```
+C rfitest
+
+{   
+    int a = 0;
+    int *x;
+    int y = 0;
+}
+
+P0(int **x, int *y, int *a)
+{
+    WRITE_ONCE(*a, 1);
+    smp_mb();
+    WRITE_ONCE(*y, 1);
+
+}
+
+P1(int **x, int *y, int *a)
+{   
+    int r0;
+    int *r1;
+    int r2;
+
+    r0 = READ_ONCE(*y);
+    if (r0 == 1) {
+       WRITE_ONCE(*x, a);
+       r1 = READ_ONCE(*x);
+       r2 = READ_ONCE(*r1);
+    }
+}
+
+exists (1:r0 = 1 /\ 1:r2 = 0)
+```
+
+In this example, to avoid the condition where register r0's value in P1 is 1 and r2's value is 0, we expect P0's store to `a` to propogate to P1's load of `a`. This is intuitively enforced by the fact that, between that "store to a" and "load from a" event, we have the following:
+ 1. A strong fence: `smp_mb()`.
+ 2. A `read-from` dependency between P0's store to `y` and P1's load of `y`.
+ 3. And a control dependency that we will execute the body of the loop only if the value loaded in step 2 obtained a value of 1.
+
+However, modern hardware is anything but intuitive! So the case where register r0's value in P1 is 1 and r2's value is 0 can very well happen on weakly ordered architectures like PowerPC.
+
+The reason for this is control-flow speculation along with a feature in pipelined hardware called `store forwarding`. The body of the loop can be speculatively executed by the processor in advance of knowing the value `y` being loaded into `r0`. Further, the body of the loop is indendent of r0. So as long as the processor does not COMMIT the side effects of store to `x` in P1 until the processor knows the value of `y`, everything is fine.
+
+This is where store-forwarding comes in. Even before the store of the address of a to `x` in P0 can be committed, the address of `x` can be forwarded directly to the load of `x`. The next statement then loads a stale value of `a`, before the value of `y` can even be loaded, thus resulting in the counter-intuitive outcome. The store-forwarding behavior is modeled by the `->rfi` relation in the LKMM (Read-from internal relation).
+
+As can be seen in this example, both store-forwarding and speculation are required to result in the counter-inutive outcome.
+
+This can be avoided by adding a full memory barrier as the first statement in the body of the `if` block. This will ensure that 
+
+## 5. 
+
+
+
+
