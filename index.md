@@ -507,10 +507,4 @@ This is where store-forwarding comes in. Even before the store of the address of
 
 As can be seen in this example, both store-forwarding and speculation are required to result in the counter-inutive outcome.
 
-This can be avoided by adding a full memory barrier as the first statement in the body of the `if` block. This will ensure that 
-
-## 5. 
-
-
-
-
+This can be avoided by adding a full memory barrier as the first statement in the body of the `if` block. This will ensure that the process of speculation completes before executing the body of the loop.
