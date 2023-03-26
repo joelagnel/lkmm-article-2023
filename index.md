@@ -393,13 +393,16 @@ exists (y=2 /\ 1:r0=0)
 
 The exists clause tries to verify if any candidate execution in this concurrent program can result in `y` having a final value of 2, and P1's read into register r0 having a value of 0.
 
-Intuitively speaking, if `y` has a final value of 2, then the store of 1 to `y` happened before the store of 2 to `y`. This means that the store of 1 to `x` happened before the store of 1 to `y`.
+Intuitively speaking, if y has a final value of 2, then the store of 1 to y in some sense preceded the store of 2 to y.
+The smp_mb() guarantees that the P1()'s store to y precedes its load from x, and the smp_wmb() guarantees that P0()'s stores are seen in order.
 
-Also due to the strong fence, the read of `x` happenned after the store of 2 to `y`.
+Putting all of this together, one might hope that whenever the final value of y is 2, the final value of r0 would be
+guaranteed to be 1.
 
-Putting all this together, we could conclude that if the final value of `y` is 2, then the read from `x` on `P1` happened after the write to `x` on `P0`. This means the read into register `r0` can never be 0.
 
-However, we are missing a subtle point related to propagation which can indeed make this happen! Even though we have the `->co` relation between the stores to `y`, the store to `x` can be propagated much later to thread `P1` as the `weak fence` delays the propagation.
+Unfortunately, there is real hardware that runs the Linux kernel on which the final value of y can be 2 and the final value of r0 can be 0.  LKMM must therefore allow this outcome, counter-intuitive though it might be.
+
+The issue happens because we did not consider a subtle point related to propagation here. Even though we have the `->co` relation between the stores to `y`, the store to `x` can be propagated much later to thread `P1` as the `weak fence` delays the propagation.
 
 Let us see what it takes to forbid this mathematically and why weak fences cannot forbid it. First lets define a `->prop` relation. A `->prop` relation guarantees the propagation of changes to different memory locations to happen in a certain order.
 
@@ -424,7 +427,7 @@ and
 ```
 READ_ONCE(*x); ->prop WRITE_ONCE(*y, 1);
 ```
-That may appear like a cycle at first that we can just forbid, however it is important to realize that `A ->prop B` and `B ->prop C` does not imply `A ->prop C`. Because we have no way of chaining 2 `->prop` relations, we cannot define a chain of `->prop` relations to be acyclic because `->prop` relations may not happen temporally with respect to each other.
+That may appear like a cycle at first that we can should be intuitively forbidden, however it is important to realize that `A ->prop B` and `B ->prop C` does not imply `A ->prop C`. Because we have no way of chaining 2 `->prop` relations this way, we cannot define a chain of `->prop` relations to be acyclic because `->prop` relations may not happen temporally in a strict order.
 
 In plain words, The action "A propagating before B" can happen after the action "B propagating before C".
 
